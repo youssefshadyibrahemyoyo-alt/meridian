@@ -94,7 +94,7 @@ export function AdaptiveDashboardView({
   const [expandedProposals, setExpandedProposals] = useState(true);
 
   const today = workspace.anchorDate;
-  const { effectiveMode, reason } = resolveEffectiveDashboardMode(workspace, capacityDays);
+  const { effectiveMode } = resolveEffectiveDashboardMode(workspace, capacityDays);
   const orderedWidgets = getOrderedVisibleWidgets(workspace, effectiveMode);
   const rankedPriorities = rankTodayPriorities(workspace, today);
   const pendingProposals = workspace.proposals.filter((p) => p.status === 'pending');
@@ -134,17 +134,43 @@ export function AdaptiveDashboardView({
 
   const renderWidget = (widget: DashboardWidgetConfig) => {
     switch (widget.id) {
-      case 'insights_proposals':
+      case 'insights_proposals': {
+        if (insights.length === 0 && pendingProposals.length === 0) {
+          return (
+            <div className="card" key={widget.id}>
+              <div className="card-header" style={{ marginBottom: 8 }}>
+                <div>
+                  <h3 className="card-title">
+                    <Sparkles size={15} />
+                    Insights & AI Suggestions
+                  </h3>
+                  <div className="card-meta">
+                    As you add goals, deadlines, and tasks, Meridian connects them here and asks
+                    before changing anything.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => onOpenQuickAI()}
+                >
+                  Ask Meridian AI
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="card" key={widget.id}>
             <div className="card-header">
               <div>
                 <h3 className="card-title">
                   <Sparkles size={15} />
-                  Connected Context & Pending Approvals
+                  Insights & AI Suggestions
                 </h3>
                 <div className="card-meta">
-                  Cross-domain trade-offs, bottlenecks, and permission-gated proposals
+                  Connections across your goals and schedule — nothing changes without your approval
                 </div>
               </div>
               {pendingProposals.length > 0 && (
@@ -154,17 +180,13 @@ export function AdaptiveDashboardView({
                   onClick={() => setExpandedProposals((v) => !v)}
                 >
                   {expandedProposals
-                    ? `Hide Proposals (${pendingProposals.length})`
-                    : `Review Proposals (${pendingProposals.length})`}
+                    ? `Hide Suggestions (${pendingProposals.length})`
+                    : `Review Suggestions (${pendingProposals.length})`}
                 </button>
               )}
             </div>
 
-            {insights.length === 0 ? (
-              <div className="empty-state" style={{ padding: '18px 16px' }}>
-                All active goals, deadlines, and daily capacities are balanced right now.
-              </div>
-            ) : (
+            {insights.length > 0 && (
               <div className="insight-strip">
                 {insights.map((ins) => (
                   <div key={ins.id} className="insight-card">
@@ -244,32 +266,33 @@ export function AdaptiveDashboardView({
               ))}
           </div>
         );
+      }
 
       case 'priorities':
         return (
           <div className="card" key={widget.id}>
             <div className="card-header">
               <div>
-                <h3 className="card-title">Today’s Priorities</h3>
+                <h3 className="card-title">Today’s Tasks</h3>
                 <div className="card-meta">
                   {todayCap
-                    ? `${formatDurationMins(todayCap.plannedTaskMins)} remaining · ${formatDurationMins(
+                    ? `${formatDurationMins(todayCap.plannedTaskMins)} planned today · ${formatDurationMins(
                         todayCap.effectiveCapacityMins
-                      )} realistic deep focus available`
-                    : 'Ranked by goal impact & deadline proximity'}
+                      )} daily focus budget`
+                    : 'Your priorities for today'}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button type="button" className="btn btn-sm" onClick={onOpenNewTaskModal}>
                   <Plus size={13} />
-                  Detailed Task
+                  Add Details
                 </button>
                 <button
                   type="button"
                   className="btn btn-sm btn-ghost"
                   onClick={() => onNavigate('planner')}
                 >
-                  Full Planner
+                  Open Planner
                 </button>
               </div>
             </div>
@@ -280,7 +303,7 @@ export function AdaptiveDashboardView({
             >
               <input
                 className="input-field"
-                placeholder="Quick capture priority for today... (Press Enter)"
+                placeholder="Add a task for today... (Press Enter)"
                 value={quickTaskTitle}
                 onChange={(e) => setQuickTaskTitle(e.target.value)}
               />
@@ -291,7 +314,8 @@ export function AdaptiveDashboardView({
 
             {rankedPriorities.length === 0 ? (
               <div className="empty-state">
-                Today’s slate is clear. Pull an upcoming milestone forward or log recovery time.
+                No tasks scheduled for today yet. Type one above or click{' '}
+                <strong>Add Details</strong> to link a task to a goal or project.
               </div>
             ) : (
               <div className="task-list">
@@ -365,7 +389,7 @@ export function AdaptiveDashboardView({
                           type="button"
                           className={`btn btn-sm ${isFocusing ? 'btn-primary' : 'btn-ghost'}`}
                           onClick={() => onStartFocus(task.id)}
-                          title="Start calm focus session"
+                          title="Start focus timer"
                         >
                           <Play size={12} />
                           {isFocusing ? 'Focusing' : 'Focus'}
@@ -384,9 +408,9 @@ export function AdaptiveDashboardView({
           <div className="card" key={widget.id}>
             <div className="card-header">
               <div>
-                <h3 className="card-title">7-Day Capacity & Load</h3>
+                <h3 className="card-title">Weekly Schedule Load</h3>
                 <div className="card-meta">
-                  Planned task hours vs. event-adjusted focus budget
+                  Planned time vs. your daily focus limit
                 </div>
               </div>
               <button
@@ -394,13 +418,13 @@ export function AdaptiveDashboardView({
                 className="btn btn-sm btn-ghost"
                 onClick={() => onNavigate('planner')}
               >
-                Adjust Week
+                Plan Week
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {capacityDays.map((day) => {
-                const maxScale = Math.max(320, day.effectiveCapacityMins, day.plannedTaskMins);
+                const maxScale = Math.max(240, day.effectiveCapacityMins, day.plannedTaskMins);
                 const capPct = Math.min(100, Math.round((day.effectiveCapacityMins / maxScale) * 100));
                 const loadPct = Math.min(100, Math.round((day.plannedTaskMins / maxScale) * 100));
                 const isOver = day.overloadMins > 0;
@@ -422,7 +446,7 @@ export function AdaptiveDashboardView({
                             className="font-mono"
                             style={{ color: 'var(--status-attention-text)', marginLeft: 6 }}
                           >
-                            · {day.hardDeadlinesCount} deadline
+                            · {day.hardDeadlinesCount} due
                           </span>
                         )}
                       </span>
@@ -448,7 +472,7 @@ export function AdaptiveDashboardView({
                         }}
                       />
                       <div
-                        title={`Effective focus budget (${formatDurationMins(day.effectiveCapacityMins)})`}
+                        title={`Daily limit (${formatDurationMins(day.effectiveCapacityMins)})`}
                         style={{
                           position: 'absolute',
                           left: `${capPct}%`,
@@ -473,28 +497,29 @@ export function AdaptiveDashboardView({
               <div>
                 <h3 className="card-title">
                   <Compass size={15} />
-                  Active Goals & Milestones
+                  Goals & Milestones
                 </h3>
-                <div className="card-meta">Connected long-term ambitions</div>
+                <div className="card-meta">What you are working toward</div>
               </div>
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
                 onClick={() => onNavigate('goals')}
               >
-                All Goals
+                View All
               </button>
             </div>
 
             {workspace.goals.length === 0 ? (
               <div className="empty-state">
-                <p style={{ margin: '0 0 10px' }}>No active goals defined yet.</p>
+                <p style={{ margin: '0 0 10px' }}>Add a goal to connect your daily tasks.</p>
                 <button
                   type="button"
                   className="btn btn-sm btn-primary"
                   onClick={() => onOpenModalMode('goal')}
                 >
-                  Create First Goal
+                  <Plus size={13} />
+                  Add Goal
                 </button>
               </div>
             ) : (
@@ -538,7 +563,7 @@ export function AdaptiveDashboardView({
                         </div>
                         {nextMs && (
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            Next milestone: {nextMs.title}
+                            Next: {nextMs.title}
                           </div>
                         )}
                       </div>
@@ -554,8 +579,8 @@ export function AdaptiveDashboardView({
           <div className="card" key={widget.id}>
             <div className="card-header">
               <div>
-                <h3 className="card-title">Current Projects</h3>
-                <div className="card-meta">Execution workspaces & linked deliverables</div>
+                <h3 className="card-title">Projects</h3>
+                <div className="card-meta">Active workspaces & deliverables</div>
               </div>
               <button
                 type="button"
@@ -563,12 +588,22 @@ export function AdaptiveDashboardView({
                 onClick={() => onOpenModalMode('architect')}
               >
                 <Sparkles size={12} />
-                Architect
+                Plan with AI
               </button>
             </div>
 
             {workspace.projects.length === 0 ? (
-              <div className="empty-state">No projects active.</div>
+              <div className="empty-state">
+                <p style={{ margin: '0 0 10px' }}>No projects yet.</p>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => onOpenModalMode('project')}
+                >
+                  <Plus size={13} />
+                  New Project
+                </button>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {workspace.projects.slice(0, 3).map((proj) => {
@@ -599,17 +634,19 @@ export function AdaptiveDashboardView({
                             className="domain-dot"
                             style={{ background: DOMAIN_META[proj.domain].accentVar }}
                           />
-                          {openCount} open
+                          {openCount} tasks
                         </span>
                       </div>
-                      <div style={{ fontSize: 12.3, color: 'var(--text-secondary)' }}>
-                        {proj.summary}
-                      </div>
+                      {proj.summary && (
+                        <div style={{ fontSize: 12.3, color: 'var(--text-secondary)' }}>
+                          {proj.summary}
+                        </div>
+                      )}
                       <div
                         className="font-mono"
                         style={{ fontSize: 11.2, color: 'var(--text-muted)', marginTop: 6 }}
                       >
-                        Deadline {formatFriendlyDate(proj.deadline, today)} · {proj.progress}% complete
+                        Due {formatFriendlyDate(proj.deadline, today)} · {proj.progress}%
                       </div>
                     </div>
                   );
@@ -626,55 +663,88 @@ export function AdaptiveDashboardView({
               <div>
                 <h3 className="card-title">
                   <GraduationCap size={15} />
-                  Learning & Skill Bridges
+                  Learning & Skills
                 </h3>
-                <div className="card-meta">Weak topics & capability requirements</div>
+                <div className="card-meta">Topics & skills you are developing</div>
               </div>
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
                 onClick={() => onNavigate('domains')}
               >
-                Open Hub
+                Manage
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {workspace.learningTopics.slice(0, 3).map((lt) => (
-                <div
-                  key={lt.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    paddingBottom: 9,
-                    borderBottom: '1px solid var(--border-subtle)',
-                  }}
+            {workspace.learningTopics.length === 0 && workspace.skills.length === 0 ? (
+              <div className="empty-state">
+                <p style={{ margin: '0 0 10px' }}>
+                  Track subjects, weak topics, or skills you want to build.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => onNavigate('domains')}
                 >
-                  <div>
-                    <div style={{ fontWeight: 500, fontSize: 13.2 }}>
-                      {lt.topic}
-                      {lt.struggleFlag && (
-                        <span className="pill pill-attention" style={{ marginLeft: 7 }}>
-                          Focus Area
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {lt.subject} · Mastery {lt.mastery}%
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => onScheduleStudyTopic(lt.id)}
+                  Open Learning & Skills
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {workspace.learningTopics.slice(0, 3).map((lt) => (
+                  <div
+                    key={lt.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      paddingBottom: 9,
+                      borderBottom: '1px solid var(--border-subtle)',
+                    }}
                   >
-                    + 45m Drill
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 13.2 }}>
+                        {lt.topic}
+                        {lt.struggleFlag && (
+                          <span className="pill pill-attention" style={{ marginLeft: 7 }}>
+                            Weak Area
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {lt.subject} · {lt.mastery}% mastery
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => onScheduleStudyTopic(lt.id)}
+                    >
+                      + 45m Study
+                    </button>
+                  </div>
+                ))}
+                {workspace.learningTopics.length === 0 &&
+                  workspace.skills.slice(0, 3).map((sk) => (
+                    <div
+                      key={sk.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 13,
+                        paddingBottom: 8,
+                        borderBottom: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      <span style={{ fontWeight: 500 }}>{sk.name}</span>
+                      <span className="font-mono" style={{ color: 'var(--text-muted)' }}>
+                        Lv {sk.currentLevel}/{sk.targetLevel}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         );
 
@@ -687,10 +757,12 @@ export function AdaptiveDashboardView({
               <div>
                 <h3 className="card-title">
                   <Dumbbell size={15} />
-                  Athletic & Training Pulse
+                  Fitness & Training
                 </h3>
                 <div className="card-meta">
-                  {workspace.workouts.length} recent sessions · {formatDurationMins(totalMins)} logged
+                  {workspace.workouts.length > 0
+                    ? `${workspace.workouts.length} sessions · ${formatDurationMins(totalMins)} total`
+                    : 'Workouts, sports, and recovery'}
                 </div>
               </div>
               <button
@@ -698,7 +770,7 @@ export function AdaptiveDashboardView({
                 className="btn btn-sm btn-ghost"
                 onClick={() => onNavigate('domains')}
               >
-                Log Session
+                Log Workout
               </button>
             </div>
 
@@ -725,7 +797,16 @@ export function AdaptiveDashboardView({
                 </div>
               </div>
             ) : (
-              <div className="empty-state">No training sessions logged yet.</div>
+              <div className="empty-state">
+                <p style={{ margin: '0 0 10px' }}>No workouts logged yet.</p>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => onNavigate('domains')}
+                >
+                  Log First Session
+                </button>
+              </div>
             )}
           </div>
         );
@@ -738,14 +819,21 @@ export function AdaptiveDashboardView({
               <div>
                 <h3 className="card-title">
                   <Calendar size={15} />
-                  Upcoming Commitments
+                  Upcoming Events
                 </h3>
-                <div className="card-meta">Fixed schedule anchors affecting daily capacity</div>
+                <div className="card-meta">Classes, meetings, and fixed plans</div>
               </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => onNavigate('analytics')}
+              >
+                Add Event
+              </button>
             </div>
 
-            {workspace.events.length === 0 ? (
-              <div className="empty-state">No fixed commitments scheduled.</div>
+            {workspace.events.filter((e) => e.date >= today).length === 0 ? (
+              <div className="empty-state">No upcoming events added yet.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {workspace.events
@@ -783,7 +871,7 @@ export function AdaptiveDashboardView({
             <div className="card-header">
               <div>
                 <h3 className="card-title">Quick Actions</h3>
-                <div className="card-meta">High-leverage workflows</div>
+                <div className="card-meta">Common shortcuts</div>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
@@ -797,13 +885,13 @@ export function AdaptiveDashboardView({
               </button>
               <button type="button" className="btn" onClick={() => onOpenModalMode('architect')}>
                 <Sparkles size={13} />
-                Project Architect
+                Plan a Project
               </button>
               <button
                 type="button"
                 className="btn"
                 onClick={() =>
-                  onOpenQuickAI('Help me prioritize today and spot any hidden schedule bottlenecks.')
+                  onOpenQuickAI('Help me organize my day around my main priorities.')
                 }
               >
                 <Sparkles size={13} />
@@ -819,15 +907,18 @@ export function AdaptiveDashboardView({
     <div>
       <div className="page-header">
         <div>
-          <div className="page-eyebrow">
-            {formatFriendlyDate(today)} · {DASHBOARD_MODE_META[effectiveMode].label} Posture
-          </div>
-          <h1 className="page-title">Good day, {workspace.profile.displayName}.</h1>
-          <p className="page-subtitle">{reason}</p>
+          <div className="page-eyebrow">{formatFriendlyDate(today)}</div>
+          <h1 className="page-title">
+            Hello{workspace.profile.displayName ? `, ${workspace.profile.displayName}` : ''}.
+          </h1>
+          <p className="page-subtitle">
+            {workspace.profile.headline ||
+              DASHBOARD_MODE_META[workspace.profile.activeDashboardMode].subtitle}
+          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div className="segmented-bar" role="tablist" aria-label="Dashboard mode">
+          <div className="segmented-bar" role="tablist" aria-label="Dashboard view">
             {(Object.keys(DASHBOARD_MODE_META) as DashboardMode[]).map((m) => (
               <button
                 key={m}
@@ -848,7 +939,7 @@ export function AdaptiveDashboardView({
             onClick={() => setCustomizing((v) => !v)}
           >
             <SlidersHorizontal size={14} />
-            {customizing ? 'Done Customizing' : 'Customize'}
+            {customizing ? 'Done' : 'Customize'}
           </button>
         </div>
       </div>
@@ -857,22 +948,21 @@ export function AdaptiveDashboardView({
         <div className="card" style={{ marginBottom: 22 }}>
           <div className="card-header">
             <div>
-              <h3 className="card-title">Customize Dashboard Modules</h3>
+              <h3 className="card-title">Customize Dashboard</h3>
               <div className="card-meta">
-                Show, hide, pin, resize, or reorder modules. Pinned modules stay anchored even in
-                Adaptive mode.
+                Show, hide, pin, resize, or reorder widgets to keep your home screen clean.
               </div>
             </div>
             <button type="button" className="btn btn-sm" onClick={onResetWidgets}>
               <RotateCcw size={13} />
-              Reset Default Layout
+              Reset Layout
             </button>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
               gap: 10,
             }}
           >
@@ -903,7 +993,7 @@ export function AdaptiveDashboardView({
                   <button
                     type="button"
                     className="btn btn-sm btn-ghost"
-                    title={w.span === 'wide' ? 'Make half width' : 'Make full width'}
+                    title={w.span === 'wide' ? 'Half width' : 'Full width'}
                     onClick={() => toggleWidgetSpan(w.id)}
                   >
                     {w.span === 'wide' ? <Maximize2 size={12} /> : <Columns2 size={12} />}

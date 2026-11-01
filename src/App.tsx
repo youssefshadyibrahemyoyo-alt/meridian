@@ -36,7 +36,6 @@ import type {
 import { addDaysISO, getLocalTodayISO, uid } from './lib/dateUtils';
 import {
   createBlankWorkspace,
-  createRichSampleWorkspace,
   DEFAULT_WIDGETS,
 } from './lib/seedWorkspace';
 import {
@@ -70,6 +69,10 @@ import { TaskComposerModal } from './components/TaskComposerModal';
 import { GoalAndProjectModal } from './components/GoalAndProjectModal';
 import { CommandPalette } from './components/CommandPalette';
 import { QuickAssistantDrawer } from './components/QuickAssistantDrawer';
+import {
+  PersonalSetupFlow,
+  type PersonalSetupPayload,
+} from './components/PersonalSetupFlow';
 
 export function App() {
   const [workspace, setWorkspace] = useState<MeridianWorkspace>(() =>
@@ -875,6 +878,109 @@ export function App() {
     }
   };
 
+  const handleCompletePersonalSetup = (payload: PersonalSetupPayload) => {
+    const nowIso = new Date().toISOString();
+    commitWorkspace((prev) => {
+      const wantsFitness = payload.selectedDomains.includes('fitness');
+      const wantsLearning =
+        payload.selectedDomains.includes('academics') ||
+        payload.selectedDomains.includes('learning') ||
+        payload.selectedDomains.includes('skills');
+      const wantsProjects = payload.selectedDomains.includes('projects');
+
+      const tailoredWidgets = prev.widgets.map((w) => {
+        if (w.id === 'fitness_readiness') return { ...w, visible: wantsFitness };
+        if (w.id === 'learning_skills') return { ...w, visible: wantsLearning };
+        if (w.id === 'projects_pulse') return { ...w, visible: wantsProjects };
+        return w;
+      });
+
+      const nextGoals = [...prev.goals];
+      const nextTasks = [...prev.tasks];
+
+      if (payload.firstGoal && payload.firstGoal.title) {
+        const createdGoalId = uid('goal');
+        nextGoals.unshift({
+          id: createdGoalId,
+          title: payload.firstGoal.title,
+          description: '',
+          domain: payload.firstGoal.domain,
+          horizon: 'quarterly',
+          priority: 'high',
+          status: 'active',
+          progress: 0,
+          targetDate: payload.firstGoal.targetDate,
+          weeklyTargetHours: Math.max(
+            2,
+            Math.round((payload.dailyFocusCapacityMins / 60) * 1.5)
+          ),
+          milestones: [],
+          requiredSkills: [],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        });
+
+        if (payload.firstGoal.firstTaskTitle) {
+          nextTasks.unshift({
+            id: uid('task'),
+            title: payload.firstGoal.firstTaskTitle,
+            notes: '',
+            domain: payload.firstGoal.domain,
+            goalId: createdGoalId,
+            status: 'todo',
+            priority: 'high',
+            energyLoad: 'deep',
+            estimatedMins: 45,
+            scheduledDate: prev.anchorDate,
+            recurrence: 'none',
+            subtasks: [],
+            rescheduleCount: 0,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+          });
+        }
+      }
+
+      return {
+        ...prev,
+        profile: {
+          ...prev.profile,
+          displayName: payload.displayName,
+          headline: payload.headline,
+          preferredTheme: payload.preferredTheme,
+          selectedDomains: payload.selectedDomains,
+          dailyFocusCapacityMins: payload.dailyFocusCapacityMins,
+          onboardingCompleted: true,
+        },
+        aiPermissions: {
+          ...prev.aiPermissions,
+          allowProactiveProposals: payload.aiPermissions.allowProactiveProposals,
+          allowBehaviorMemory: payload.aiPermissions.allowBehaviorMemory,
+        },
+        widgets: tailoredWidgets,
+        goals: nextGoals,
+        tasks: nextTasks,
+      };
+    });
+    showToast(`Welcome, ${payload.displayName}. Your workspace is ready.`);
+  };
+
+  if (!workspace.profile.onboardingCompleted) {
+    return (
+      <PersonalSetupFlow
+        todayIso={workspace.anchorDate}
+        initialTheme={workspace.profile.preferredTheme}
+        onPreviewTheme={(theme) =>
+          setWorkspace((prev) => ({
+            ...prev,
+            profile: { ...prev.profile, preferredTheme: theme },
+          }))
+        }
+        onComplete={handleCompletePersonalSetup}
+      />
+    );
+  }
+
   return (
     <div className="meridian-shell">
       {/* Desktop Adaptive Sidebar */}
@@ -1345,12 +1451,17 @@ export function App() {
                 }));
               }}
               onResetBlank={() => {
-                setWorkspace(createBlankWorkspace(getLocalTodayISO()));
-                showToast('Reset to a clean workspace.');
+                setWorkspace((prev) => ({
+                  ...createBlankWorkspace(getLocalTodayISO()),
+                  profile: { ...prev.profile, onboardingCompleted: true },
+                }));
+                showToast('Cleared all workspace items.');
               }}
-              onRestoreSample={() => {
-                setWorkspace(createRichSampleWorkspace(getLocalTodayISO()));
-                showToast('Restored rich connected sample workspace.');
+              onRerunSetup={() => {
+                commitWorkspace((prev) => ({
+                  ...prev,
+                  profile: { ...prev.profile, onboardingCompleted: false },
+                }));
               }}
               onDeleteAllData={async () => {
                 await wipeCloudAndLocalData(authUser?.id);

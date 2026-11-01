@@ -28,10 +28,10 @@ interface AssistantWorkspaceViewProps {
 }
 
 const STRATEGIC_PROMPTS = [
-  'Organize my next 3 days around peak morning energy and protect Friday exam prep.',
-  'Turn an idea into a structured project: "Build personal spaced-repetition research archive".',
-  'Where am I overcommitted right now, and what trade-off do you recommend?',
-  'Which skill gap is most likely to slow down my active projects?',
+  'Help me organize my day realistically around my top priorities.',
+  'Turn a new idea or goal into a clear project with milestones and tasks.',
+  'Are any of my goals or deadlines competing for too much time this week?',
+  'Recommend what skill or topic I should focus on next.',
 ];
 
 export function AssistantWorkspaceView({
@@ -63,11 +63,11 @@ export function AssistantWorkspaceView({
     <div>
       <div className="page-header">
         <div>
-          <div className="page-eyebrow">Permission-First Intelligence</div>
-          <h1 className="page-title">Meridian Strategist</h1>
+          <div className="page-eyebrow">AI Assistant</div>
+          <h1 className="page-title">Meridian AI</h1>
           <p className="page-subtitle">
-            Synthesizes goals, deadlines, learning, and energy patterns. Meaningful changes always
-            require your approval.
+            Helps plan your day, structure ideas into projects, and spot trade-offs—always asking
+            your approval before making changes.
           </p>
         </div>
 
@@ -124,6 +124,12 @@ export function AssistantWorkspaceView({
                 padding: '6px 2px',
               }}
             >
+              {workspace.assistantHistory.length === 0 && !isThinking && (
+                <div className="empty-state">
+                  Ask anything about your goals, tasks, or ideas—or pick a quick prompt above to
+                  draft a structured plan.
+                </div>
+              )}
               {workspace.assistantHistory.map((msg) => {
                 const linkedProposal = msg.proposalId
                   ? workspace.proposals.find((p) => p.id === msg.proposalId)

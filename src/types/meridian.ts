@@ -294,7 +294,9 @@ export interface AssistantMessage {
 export interface UserProfile {
   displayName: string;
   headline: string;
-  dailyFocusCapacityMins: number; // e.g. 240 mins (4h deep work outside fixed lectures/events)
+  onboardingCompleted: boolean;
+  selectedDomains: LifeDomain[];
+  dailyFocusCapacityMins: number;
   preferredTheme: ThemePolarity;
   activeDashboardMode: DashboardMode;
   aiProvider: 'builtin' | 'gemini' | 'openai' | 'groq';

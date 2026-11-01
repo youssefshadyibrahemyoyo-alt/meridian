@@ -2,36 +2,42 @@ import type { DashboardMode, LifeDomain, PriorityLevel } from '../types/meridian
 
 export const DOMAIN_META: Record<
   LifeDomain,
-  { label: string; shortLabel: string; accentVar: string }
+  { label: string; shortLabel: string; description: string; accentVar: string }
 > = {
   academics: {
-    label: 'Academics & Study',
-    shortLabel: 'Academics',
+    label: 'Study & Education',
+    shortLabel: 'Study',
+    description: 'Classes, exams, homework, and revision',
     accentVar: 'var(--domain-academics)',
   },
   projects: {
     label: 'Projects & Work',
     shortLabel: 'Projects',
+    description: 'Personal builds, client work, and deliverables',
     accentVar: 'var(--domain-projects)',
   },
   fitness: {
     label: 'Fitness & Sports',
     shortLabel: 'Fitness',
+    description: 'Workouts, football, conditioning, and recovery',
     accentVar: 'var(--domain-fitness)',
   },
   skills: {
-    label: 'Skills & Craft',
+    label: 'Skills & Growth',
     shortLabel: 'Skills',
+    description: 'New abilities, creative practice, and mastery',
     accentVar: 'var(--domain-skills)',
   },
   learning: {
-    label: 'Deep Learning',
+    label: 'Self-Learning',
     shortLabel: 'Learning',
+    description: 'Reading, courses, and weak-topic practice',
     accentVar: 'var(--domain-learning)',
   },
   personal: {
-    label: 'Life & Balance',
+    label: 'Life & Routines',
     shortLabel: 'Personal',
+    description: 'Daily habits, plans, and personal balance',
     accentVar: 'var(--domain-personal)',
   },
 };
@@ -44,7 +50,7 @@ export const PRIORITY_WEIGHT: Record<PriorityLevel, number> = {
 };
 
 export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
-  critical: 'Critical',
+  critical: 'Urgent',
   high: 'High',
   medium: 'Medium',
   low: 'Low',
@@ -55,23 +61,23 @@ export const DASHBOARD_MODE_META: Record<
   { label: string; subtitle: string }
 > = {
   adaptive: {
-    label: 'Adaptive',
-    subtitle: 'Adjusts layout to deadlines, workload, and active bottlenecks',
+    label: 'Auto',
+    subtitle: 'Adapts automatically to your current tasks and deadlines',
   },
   execution: {
-    label: 'Deep Execution',
-    subtitle: 'Elevates immediate priorities, focus blocks, and active projects',
+    label: 'Focus',
+    subtitle: 'Highlights today’s tasks and active projects',
   },
   deadline: {
-    label: 'Deadline Crunch',
-    subtitle: 'Protects time around upcoming deadlines and surfaces trade-offs',
+    label: 'Deadlines',
+    subtitle: 'Highlights upcoming due dates and schedule load',
   },
   strategic: {
-    label: 'Strategic Horizon',
-    subtitle: 'Focuses on long-term goals, milestones, and weekly allocation',
+    label: 'Goals',
+    subtitle: 'Highlights long-term goals and milestones',
   },
   balance: {
-    label: 'Growth & Balance',
-    subtitle: 'Foregrounds learning bridges, athletic readiness, and recovery',
+    label: 'Balance',
+    subtitle: 'Highlights learning, fitness, and routines',
   },
 };

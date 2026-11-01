@@ -47,7 +47,7 @@ interface AnalyticsAndSystemViewProps {
   onAddEvent: (ev: CalendarEvent) => void;
   onConnectGitHubHandle: (handle: string) => void;
   onResetBlank: () => void;
-  onRestoreSample: () => void;
+  onRerunSetup: () => void;
   onDeleteAllData: () => Promise<void>;
 }
 
@@ -65,7 +65,7 @@ export function AnalyticsAndSystemView({
   onAddEvent,
   onConnectGitHubHandle,
   onResetBlank,
-  onRestoreSample,
+  onRerunSetup,
   onDeleteAllData,
 }: AnalyticsAndSystemViewProps) {
   const [tab, setTab] = useState<'analytics' | 'integrations' | 'privacy'>('analytics');
@@ -87,8 +87,7 @@ export function AnalyticsAndSystemView({
 
   // GitHub live public fetch
   const [ghHandle, setGhHandle] = useState(
-    workspace.integrations.find((i) => i.provider === 'github')?.config.usernameOrHandle ||
-      'youssefshadyibrahemyoyo-alt'
+    workspace.integrations.find((i) => i.provider === 'github')?.config.usernameOrHandle || ''
   );
   const [ghRepos, setGhRepos] = useState<GitHubRepoItem[]>([]);
   const [ghStatus, setGhStatus] = useState('');
@@ -796,15 +795,15 @@ export function AnalyticsAndSystemView({
                 <Download size={12} />
                 Export Markdown
               </button>
-              <button type="button" className="btn btn-sm" onClick={onRestoreSample}>
-                Restore Sample Workspace
+              <button type="button" className="btn btn-sm" onClick={onRerunSetup}>
+                Re-run Personal Setup
               </button>
               <button
                 type="button"
                 className="btn btn-sm"
                 onClick={() => setConfirmAction('blank')}
               >
-                Start Clean Blank Slate
+                Clear All Items
               </button>
               <button
                 type="button"
